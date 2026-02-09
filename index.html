@@ -13,7 +13,46 @@
     })();
   </script>
 
-  <style>
+  <style><script>
+  const API_BASE = "https://YOUR-REPLIT-BACKEND.replit.dev";
+
+  const startBtn = document.getElementById("startVerificationBtn");
+  const statusBox = document.createElement("div");
+  statusBox.style.marginTop = "15px";
+  statusBox.style.fontWeight = "bold";
+  startBtn.parentNode.appendChild(statusBox);
+
+  startBtn.addEventListener("click", async () => {
+    statusBox.innerText = "Starting verification...";
+    startBtn.disabled = true;
+
+    try {
+      const res = await fetch(`${API_BASE}/jobs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trade: "General" })
+      });
+
+      const data = await res.json();
+
+      statusBox.innerHTML = `
+        ✅ Verification started<br/>
+        <small>Job ID:</small><br/>
+        <code>${data.id}</code>
+      `;
+    } catch (err) {
+      statusBox.innerText = "❌ Failed to start verification";
+      startBtn.disabled = false;
+    }
+  });
+
+  // CONTACT FORM (EmailJS placeholder – wired later)
+  document.getElementById("contactForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    alert("Message sent (EmailJS will be connected next)");
+  });
+</script>
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
