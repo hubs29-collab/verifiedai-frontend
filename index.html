@@ -3,65 +3,83 @@
 <head>
   <meta charset="UTF-8" />
   <title>VerifiedAI</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       margin: 0;
-      padding: 0;
+      background: #f4f6f8;
+      color: #111;
     }
+
     header {
       background: #0b2a4a;
       color: white;
-      padding: 25px;
+      padding: 32px 16px;
       text-align: center;
     }
-    main {
-      max-width: 600px;
-      margin: 40px auto;
-      background: white;
-      padding: 25px;
-      border-radius: 8px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
     }
+
+    header p {
+      margin-top: 8px;
+      opacity: 0.9;
+    }
+
+    .card {
+      background: white;
+      max-width: 520px;
+      margin: 30px auto;
+      padding: 24px;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
     h2 {
       margin-top: 0;
     }
+
     button {
       background: #2563eb;
       color: white;
       border: none;
       padding: 10px 16px;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 15px;
     }
+
     button:disabled {
-      background: #9ca3af;
+      background: #94a3b8;
       cursor: not-allowed;
     }
-    input {
+
+    input[type="file"] {
       margin-top: 10px;
     }
+
     .box {
-      background: #eef2ff;
-      padding: 10px;
-      border-radius: 5px;
+      background: #f1f5f9;
+      padding: 12px;
+      border-radius: 6px;
       margin-top: 10px;
       font-family: monospace;
+      font-size: 13px;
       white-space: pre-wrap;
     }
+
     footer {
       text-align: center;
+      padding: 20px;
       font-size: 13px;
-      color: #666;
-      margin: 20px 0;
+      color: #555;
     }
   </style>
 </head>
-
 <body>
 
 <header>
@@ -69,110 +87,97 @@
   <p>Compare. Verify. Decide with confidence.</p>
 </header>
 
-<main>
+<div class="card">
+  <h2>1. Start Verification</h2>
+  <button onclick="startJob()">Start Verification</button>
+  <div id="jobBox" class="box"></div>
+</div>
 
-  <h2>1️⃣ Start Verification</h2>
-  <button onclick="startVerification()">Start Verification</button>
-  <div id="jobBox" class="box" style="display:none;"></div>
-
-  <hr style="margin:30px 0">
-
-  <h2>2️⃣ Upload Evidence</h2>
+<div class="card">
+  <h2>2. Upload Evidence</h2>
   <input type="file" id="fileInput" />
-  <br><br>
+  <br /><br />
   <button onclick="uploadEvidence()">Upload Evidence</button>
-  <div id="uploadBox" class="box" style="display:none;"></div>
+  <div id="uploadBox" class="box"></div>
+</div>
 
-  <hr style="margin:30px 0">
-
-  <h2>3️⃣ Get Result</h2>
+<div class="card">
+  <h2>3. Get Result</h2>
   <button onclick="getResult()">Get Result</button>
-  <div id="resultBox" class="box" style="display:none;"></div>
-
-</main>
+  <div id="resultBox" class="box"></div>
+</div>
 
 <footer>
   © 2026 VerifiedAI
 </footer>
 
 <script>
+  // 🔴 YOUR REAL BACKEND (DO NOT CHANGE)
   const API_BASE =
     "https://ebb700d3-0624-496c-8a99-8d7888669f68-00-2wqp9jjowl32z.picard.replit.dev";
 
-  let jobId = null;
+  let currentJobId = null;
 
-  async function startVerification() {
-    try {
-      const res = await fetch(API_BASE + "/jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trade: "General" })
-      });
+  async function startJob() {
+    document.getElementById("jobBox").textContent = "Creating job...";
 
-      const data = await res.json();
-      jobId = data.id;
+    const res = await fetch(API_BASE + "/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trade: "General" })
+    });
 
-      document.getElementById("jobBox").style.display = "block";
-      document.getElementById("jobBox").textContent =
-        "Job created:\n" + JSON.stringify(data, null, 2);
-    } catch (err) {
-      alert("Error starting verification");
-      console.error(err);
-    }
+    const data = await res.json();
+    currentJobId = data.id;
+
+    document.getElementById("jobBox").textContent =
+      "Job created:\n" + JSON.stringify(data, null, 2);
   }
 
   async function uploadEvidence() {
-    if (!jobId) {
-      alert("Start verification first");
+    if (!currentJobId) {
+      alert("Start a job first");
       return;
     }
 
-    const file = document.getElementById("fileInput").files[0];
-    if (!file) {
-      alert("Select a file");
+    const fileInput = document.getElementById("fileInput");
+    if (!fileInput.files.length) {
+      alert("Choose a file");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    document.getElementById("uploadBox").style.display = "block";
     document.getElementById("uploadBox").textContent = "Uploading...";
 
-    try {
-      const res = await fetch(API_BASE + "/evidence/" + jobId, {
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    const res = await fetch(
+      API_BASE + "/evidence/" + currentJobId,
+      {
         method: "POST",
         body: formData
-      });
+      }
+    );
 
-      const data = await res.json();
-      document.getElementById("uploadBox").textContent =
-        "Upload response:\n" + JSON.stringify(data, null, 2);
-    } catch (err) {
-      alert("Upload failed");
-      console.error(err);
-    }
+    const data = await res.json();
+
+    document.getElementById("uploadBox").textContent =
+      "Evidence uploaded:\n" + JSON.stringify(data, null, 2);
   }
 
   async function getResult() {
-    if (!jobId) {
+    if (!currentJobId) {
       alert("No job created");
       return;
     }
 
-    document.getElementById("resultBox").style.display = "block";
     document.getElementById("resultBox").textContent = "Fetching result...";
 
-    try {
-      const res = await fetch(API_BASE + "/results/" + jobId);
-      const data = await res.json();
+    const res = await fetch(API_BASE + "/results/" + currentJobId);
+    const data = await res.json();
 
-      document.getElementById("resultBox").textContent =
-        "Result:\n" + JSON.stringify(data, null, 2);
-    } catch (err) {
-      alert("Failed to get result");
-      console.error(err);
-    }
+    document.getElementById("resultBox").textContent =
+      "Result:\n" + JSON.stringify(data, null, 2);
   }
 </script>
 
