@@ -1,7 +1,3 @@
-<!--
-vercel-static-fix
--->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,60 +7,57 @@ vercel-static-fix
 
   <style>
     body {
-      margin: 0;
       font-family: Arial, sans-serif;
-      background: #f5f7fb;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
     }
-
     header {
       background: #0b2a4a;
       color: white;
-      padding: 24px;
+      padding: 25px;
       text-align: center;
     }
-
     main {
-      max-width: 700px;
+      max-width: 600px;
       margin: 40px auto;
       background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.08);
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
-
     h2 {
       margin-top: 0;
     }
-
     button {
-      padding: 10px 16px;
       background: #2563eb;
       color: white;
       border: none;
-      border-radius: 6px;
+      padding: 10px 16px;
+      border-radius: 5px;
       cursor: pointer;
       font-size: 15px;
     }
-
     button:disabled {
       background: #9ca3af;
       cursor: not-allowed;
     }
-
+    input {
+      margin-top: 10px;
+    }
     .box {
       background: #eef2ff;
-      padding: 12px;
-      border-radius: 6px;
+      padding: 10px;
+      border-radius: 5px;
       margin-top: 10px;
       font-family: monospace;
-      font-size: 14px;
+      white-space: pre-wrap;
     }
-
     footer {
       text-align: center;
-      padding: 20px;
       font-size: 13px;
-      color: #555;
+      color: #666;
+      margin: 20px 0;
     }
   </style>
 </head>
@@ -78,14 +71,14 @@ vercel-static-fix
 
 <main>
 
-  <h2>1️⃣ Start a Verification</h2>
- <button onclick="startJob()">Start Verification</button>
+  <h2>1️⃣ Start Verification</h2>
+  <button onclick="startVerification()">Start Verification</button>
   <div id="jobBox" class="box" style="display:none;"></div>
 
   <hr style="margin:30px 0">
 
   <h2>2️⃣ Upload Evidence</h2>
-  <input type="file" id="file" />
+  <input type="file" id="fileInput" />
   <br><br>
   <button onclick="uploadEvidence()">Upload Evidence</button>
   <div id="uploadBox" class="box" style="display:none;"></div>
@@ -93,80 +86,94 @@ vercel-static-fix
   <hr style="margin:30px 0">
 
   <h2>3️⃣ Get Result</h2>
-  <button id="getResultBtn" onclick="getResult()" disabled>Get Result</button>
+  <button onclick="getResult()">Get Result</button>
   <div id="resultBox" class="box" style="display:none;"></div>
 
 </main>
 
 <footer>
-  © 2026 VerifiedAI. All rights reserved.
+  © 2026 VerifiedAI
 </footer>
 
 <script>
-/* 🔴 YOUR REAL BACKEND */
-const API_BASE = "https://ebb700d3-0624-496c-8a99-8d7888669f68-00-2wqp9jjowl32z.picard.replit.dev";
+  const API_BASE =
+    "https://ebb700d3-0624-496c-8a99-8d7888669f68-00-2wqp9jjowl32z.picard.replit.dev";
 
-let jobId = null;
+  let jobId = null;
 
-/* START JOB */
-async function startJob() {
-  const res = await fetch(`${API_BASE}/jobs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ trade: "General" })
-  });
+  async function startVerification() {
+    try {
+      const res = await fetch(API_BASE + "/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trade: "General" })
+      });
 
-  const data = await res.json();
-  jobId = data.id;
+      const data = await res.json();
+      jobId = data.id;
 
-  document.getElementById("jobBox").style.display = "block";
-  document.getElementById("jobBox").innerText = "Job ID: " + jobId;
-}
-
-/* UPLOAD EVIDENCE */
-async function uploadEvidence() {
-  if (!jobId) {
-    alert("Start a verification first");
-    return;
+      document.getElementById("jobBox").style.display = "block";
+      document.getElementById("jobBox").textContent =
+        "Job created:\n" + JSON.stringify(data, null, 2);
+    } catch (err) {
+      alert("Error starting verification");
+      console.error(err);
+    }
   }
 
-  const file = document.getElementById("file").files[0];
-  if (!file) {
-    alert("Select a file first");
-    return;
+  async function uploadEvidence() {
+    if (!jobId) {
+      alert("Start verification first");
+      return;
+    }
+
+    const file = document.getElementById("fileInput").files[0];
+    if (!file) {
+      alert("Select a file");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    document.getElementById("uploadBox").style.display = "block";
+    document.getElementById("uploadBox").textContent = "Uploading...";
+
+    try {
+      const res = await fetch(API_BASE + "/evidence/" + jobId, {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+      document.getElementById("uploadBox").textContent =
+        "Upload response:\n" + JSON.stringify(data, null, 2);
+    } catch (err) {
+      alert("Upload failed");
+      console.error(err);
+    }
   }
 
-  const formData = new FormData();
-  formData.append("file", file);
+  async function getResult() {
+    if (!jobId) {
+      alert("No job created");
+      return;
+    }
 
-  document.getElementById("uploadBox").style.display = "block";
-  document.getElementById("uploadBox").innerText = "Uploading…";
+    document.getElementById("resultBox").style.display = "block";
+    document.getElementById("resultBox").textContent = "Fetching result...";
 
-  const res = await fetch(`${API_BASE}/evidence/${jobId}`, {
-    method: "POST",
-    body: formData
-  });
+    try {
+      const res = await fetch(API_BASE + "/results/" + jobId);
+      const data = await res.json();
 
-  const data = await res.json();
-  console.log("Evidence response:", data);
-
-  if (data.locked === true) {
-    document.getElementById("uploadBox").innerText = "Evidence locked ✅";
-    document.getElementById("getResultBtn").disabled = false;
-  } else {
-    document.getElementById("uploadBox").innerText = "Upload failed ❌";
+      document.getElementById("resultBox").textContent =
+        "Result:\n" + JSON.stringify(data, null, 2);
+    } catch (err) {
+      alert("Failed to get result");
+      console.error(err);
+    }
   }
-}
-
-/* GET RESULT */
-async function getResult() {
-  const res = await fetch(`${API_BASE}/results/${jobId}`);
-  const data = await res.json();
-
-  document.getElementById("resultBox").style.display = "block";
-  document.getElementById("resultBox").innerText =
-    `Verdict: ${data.verdict}\nConfidence: ${data.confidence}\n\n${data.explanation}`;
-}
 </script>
 
 </body>
