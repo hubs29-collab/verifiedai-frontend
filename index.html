@@ -2,35 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VerifiedAI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f5f7fa;
       margin: 0;
-      padding: 0;
+      background: #f5f7fb;
+      color: #222;
     }
 
     header {
-      background: #0b2a4a;
+      background: #0b2545;
       color: white;
       padding: 30px;
       text-align: center;
     }
 
     main {
-      max-width: 800px;
+      max-width: 700px;
       margin: 40px auto;
-      padding: 20px;
-    }
-
-    .card {
       background: white;
-      border-radius: 8px;
-      padding: 25px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
 
     h2 {
@@ -41,44 +37,51 @@
       background: #2563eb;
       color: white;
       border: none;
-      padding: 12px 18px;
-      font-size: 16px;
+      padding: 12px 20px;
       border-radius: 6px;
       cursor: pointer;
+      font-size: 15px;
     }
 
     button:disabled {
-      background: #94a3b8;
+      opacity: 0.6;
       cursor: not-allowed;
     }
 
-    input, textarea {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
+    input[type="file"] {
+      margin-top: 10px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .result {
+      padding: 15px;
       border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 14px;
+      margin-top: 15px;
+    }
+
+    .SUPPORTED {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .PARTIALLY_SUPPORTED {
+      background: #fef9c3;
+      color: #854d0e;
+    }
+
+    .NOT_SUPPORTED {
+      background: #fee2e2;
+      color: #991b1b;
     }
 
     footer {
       text-align: center;
-      padding: 30px;
-      color: #555;
-      font-size: 14px;
-    }
-
-    .status {
-      margin-top: 15px;
-      font-weight: bold;
-    }
-
-    code {
-      background: #f1f5f9;
-      padding: 4px 6px;
-      border-radius: 4px;
-      display: inline-block;
-      margin-top: 5px;
+      padding: 20px;
+      font-size: 13px;
+      color: #666;
     }
   </style>
 </head>
@@ -91,21 +94,30 @@
 </header>
 
 <main>
-  <div class="card">
-    <h2>Start a Verification</h2>
-    <button id="startVerificationBtn">Start Verification</button>
-    <div id="status" class="status"></div>
 
-    <hr style="margin: 30px 0;">
-
-    <h2>Contact Us</h2>
-    <form id="contactForm">
-      <input type="text" placeholder="Your name" required />
-      <input type="email" placeholder="Your email" required />
-      <textarea rows="4" placeholder="Your message" required></textarea>
-      <button type="submit">Send Message</button>
-    </form>
+  <!-- STEP 1 -->
+  <div class="section">
+    <h2>1. Start a Verification</h2>
+    <button id="startBtn">Start Verification</button>
+    <p id="jobInfo"></p>
   </div>
+
+  <!-- STEP 2 -->
+  <div class="section" id="evidenceSection" style="display:none;">
+    <h2>2. Upload Evidence</h2>
+    <input type="file" id="fileInput" />
+    <br><br>
+    <button id="uploadBtn">Upload & Lock Evidence</button>
+    <p id="uploadStatus"></p>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="section" id="resultSection" style="display:none;">
+    <h2>3. Verification Result</h2>
+    <button id="resultBtn">Get Result</button>
+    <div id="resultBox"></div>
+  </div>
+
 </main>
 
 <footer>
@@ -113,40 +125,57 @@
 </footer>
 
 <script>
-  // 🔴 CHANGE THIS TO YOUR REAL REPLIT BACKEND URL
-  const API_BASE = "https://YOUR-REPLIT-BACKEND.replit.dev";
+  const API_BASE = "https://YOUR-REPLIT-BACKEND-URL"; // 🔴 REPLACE THIS
 
-  const startBtn = document.getElementById("startVerificationBtn");
-  const statusBox = document.getElementById("status");
+  let jobId = null;
 
-  startBtn.addEventListener("click", async () => {
-    statusBox.innerText = "Starting verification...";
+  const startBtn = document.getElementById("startBtn");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const resultBtn = document.getElementById("resultBtn");
+
+  startBtn.onclick = async () => {
     startBtn.disabled = true;
+    const res = await fetch(API_BASE + "/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trade: "General" })
+    });
+    const data = await res.json();
+    jobId = data.id;
+    document.getElementById("jobInfo").innerText = "Job ID: " + jobId;
+    document.getElementById("evidenceSection").style.display = "block";
+  };
 
-    try {
-      const response = await fetch(API_BASE + "/jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trade: "General" })
-      });
+  uploadBtn.onclick = async () => {
+    if (!jobId) return;
 
-      const data = await response.json();
+    uploadBtn.disabled = true;
+    document.getElementById("uploadStatus").innerText = "Uploading...";
 
-      statusBox.innerHTML = `
-        ✅ Verification started<br/>
-        Job ID:<br/>
-        <code>${data.id}</code>
-      `;
-    } catch (err) {
-      statusBox.innerText = "❌ Error starting verification";
-      startBtn.disabled = false;
-    }
-  });
+    const formData = new FormData();
+    formData.append("file", document.getElementById("fileInput").files[0]);
 
-  document.getElementById("contactForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    alert("Message received. Email sending will be enabled next.");
-  });
+    await fetch(API_BASE + "/evidence/" + jobId, {
+      method: "POST",
+      body: formData
+    });
+
+    document.getElementById("uploadStatus").innerText = "Evidence locked.";
+    document.getElementById("resultSection").style.display = "block";
+  };
+
+  resultBtn.onclick = async () => {
+    const res = await fetch(API_BASE + "/results/" + jobId);
+    const data = await res.json();
+
+    const box = document.getElementById("resultBox");
+    box.className = "result " + data.verdict;
+    box.innerHTML = `
+      <strong>Verdict:</strong> ${data.verdict}<br>
+      <strong>Confidence:</strong> ${data.confidence}<br><br>
+      ${data.explanation}
+    `;
+  };
 </script>
 
 </body>
