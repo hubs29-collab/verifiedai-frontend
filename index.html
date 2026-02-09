@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VerifiedAI</title>
+
+  <!-- EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+  <script>
+    (function () {
+      emailjs.init("57WjkFKxJyJG75nww"); // your EmailJS public key
+    })();
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      color: #222;
+    }
+    header {
+      background: #0a2540;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    main {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin-top: 0;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:disabled {
+      background: #aaa;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      border-radius: 6px;
+      background: #f0f4ff;
+      display: none;
+    }
+    .verdict {
+      font-size: 22px;
+      font-weight: bold;
+    }
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>VerifiedAI</h1>
+  <p>Compare. Verify. Decide with confidence.</p>
+</header>
+
+<main>
+  <h2>Start a Verification</h2>
+
+  <button id="startBtn">Start Verification</button>
+
+  <div id="jobSection" style="display:none;">
+    <h3>Upload Evidence</h3>
+    <input type="file" id="fileInput" />
+    <button id="uploadBtn">Upload & Analyze</button>
+  </div>
+
+  <div class="result" id="resultBox">
+    <div class="verdict" id="verdict"></div>
+    <p><strong>Confidence:</strong> <span id="confidence"></span></p>
+    <p id="explanation"></p>
+
+    <button id="downloadBtn">Download Report (PDF)</button>
+  </div>
+
+  <hr />
+
+  <h2>Contact Us</h2>
+  <input type="text" id="name" placeholder="Your name" />
+  <input type="email" id="email" placeholder="Your email" />
+  <textarea id="message" placeholder="Your message"></textarea>
+  <button id="sendEmail">Send Message</button>
+</main>
+
+<footer>
+  © 2026 VerifiedAI. All rights reserved.
+</footer>
+
+<script>
+  const API_BASE = "https://verifiedai-jasongoodwin3.replit.app";
+
+  let currentJobId = null;
+
+  document.getElementById("startBtn").onclick = async () => {
+    const res = await fetch(API_BASE + "/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trade: "General" })
+    });
+    const data = await res.json();
+    currentJobId = data.id;
+    document.getElementById("jobSection").style.display = "block";
+    document.getElementById("startBtn").disabled = true;
+  };
+
+  document.getElementById("uploadBtn").onclick = async () => {
+    await fetch(`${API_BASE}/evidence/${currentJobId}`, { method: "POST" });
+
+    const res = await fetch(`${API_BASE}/results/${currentJobId}`);
+    const result = await res.json();
+
+    document.getElementById("verdict").innerText = result.verdict;
+    document.getElementById("confidence").innerText = result.confidence;
+    document.getElementById("explanation").innerText = result.explanation;
+    document.getElementById("resultBox").style.display = "block";
+  };
+
+  document.getElementById("sendEmail").onclick = () => {
+    emailjs.send("service_xxxxx", "template_xxxxx", {
+      from_name: document.getElementById("name").value,
+      from_email: document.getElementById("email").value,
+      message: document.getElementById("message").value
+    }).then(() => {
+      alert("Message sent!");
+    });
+  };
+</script>
+
+</body>
+</html>
