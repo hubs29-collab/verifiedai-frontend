@@ -7,8 +7,9 @@
   <style>
     body { font-family: Arial; background:#f4f6f8; margin:0; }
     header { background:#0b2a4a; color:white; padding:20px; text-align:center; }
-    .card { background:white; max-width:800px; margin:20px auto; padding:20px; border-radius:8px; }
+    .card { background:white; max-width:900px; margin:20px auto; padding:20px; border-radius:8px; }
     button { background:#2563eb; color:white; border:none; padding:8px 14px; border-radius:5px; cursor:pointer; margin-top:6px; }
+    button:disabled { background:#9ca3af; cursor:not-allowed; }
     input { width:100%; padding:8px; margin-top:6px; }
     .item { border:1px solid #ddd; padding:10px; margin-top:10px; border-radius:6px; }
     .verdict { font-weight:bold; margin-top:6px; }
@@ -20,7 +21,7 @@
 
 <header>
   <h1>VerifiedAI</h1>
-  <p>Item-Level Scope Verification</p>
+  <p>Proposal & Scope Verification</p>
 </header>
 
 <div class="card">
@@ -30,27 +31,34 @@
 </div>
 
 <div class="card">
-  <h3>2. Add Scope Item</h3>
+  <h3>2. Upload Proposal (PDF or Image)</h3>
+  <input type="file" id="proposalFile" />
+  <button onclick="uploadProposal()">Upload Proposal</button>
+  <pre id="proposalBox"></pre>
+</div>
+
+<div class="card">
+  <h3>3. Add / Review Line Items</h3>
   <input id="desc" placeholder="Paint living room wall" />
   <input id="cost" placeholder="2800" />
-  <button onclick="addItem()">Add Item</button>
+  <button onclick="addItem()">Add Line Item</button>
   <div id="itemsBox"></div>
 </div>
 
 <div class="card">
-  <h3>3. Upload Evidence (for job)</h3>
+  <h3>4. Upload Evidence</h3>
   <input type="file" id="files" multiple />
-  <button onclick="uploadEvidence()">Upload Images</button>
+  <button onclick="uploadEvidence()">Upload Evidence</button>
   <pre id="uploadBox"></pre>
 </div>
 
 <div class="card">
-  <h3>4. Analyze</h3>
-  <button onclick="analyze()">Analyze Items</button>
+  <h3>5. Analyze</h3>
+  <button onclick="analyze()">Analyze Proposal</button>
 </div>
 
 <div class="card">
-  <h3>5. Results</h3>
+  <h3>6. Results</h3>
   <button onclick="getResults()">Get Results</button>
   <div id="resultsBox"></div>
 </div>
@@ -60,17 +68,32 @@ const API_BASE =
   "https://ebb700d3-0624-496c-8a99-8d7888669f68-00-2wqp9jjowl32z.picard.replit.dev";
 
 let jobId = null;
-let itemList = [];
-let uploadedImages = [];
 
 async function startJob() {
   const r = await fetch(API_BASE + "/jobs", { method:"POST" });
   const d = await r.json();
-  jobId = d.id;
+  jobId = d.jobId; // ✅ FIXED
   jobBox.textContent = "Job ID: " + jobId;
-  itemList = [];
   itemsBox.innerHTML = "";
   resultsBox.innerHTML = "";
+  proposalBox.textContent = "";
+}
+
+async function uploadProposal() {
+  if (!jobId) return alert("Start verification first");
+
+  const fd = new FormData();
+  fd.append("file", proposalFile.files[0]);
+
+  const r = await fetch(`${API_BASE}/proposal/${jobId}`, {
+    method: "POST",
+    body: fd
+  });
+
+  const d = await r.json();
+  proposalBox.textContent = JSON.stringify(d, null, 2);
+
+  d.parsedItems?.forEach(item => renderItem(item));
 }
 
 async function addItem() {
@@ -83,14 +106,16 @@ async function addItem() {
   });
 
   const item = await r.json();
-  itemList.push(item);
+  renderItem(item);
+}
 
+function renderItem(item) {
   const div = document.createElement("div");
   div.className = "item";
   div.id = item.id;
   div.innerHTML = `
     <strong>${item.description}</strong><br>
-    Cost: $${item.cost}<br>
+    Claimed Cost: $${item.cost}<br>
     <small>Item ID: ${item.id}</small>
   `;
   itemsBox.appendChild(div);
@@ -112,8 +137,7 @@ async function uploadEvidence() {
 
 async function analyze() {
   if (!jobId) return alert("Start verification first");
-
-  const r = await fetch(`${API_BASE}/analyze/${jobId}`, { method:"POST" });
+  await fetch(`${API_BASE}/analyze/${jobId}`, { method:"POST" });
   alert("Analysis complete");
 }
 
@@ -130,7 +154,7 @@ async function getResults() {
     div.className = "item";
     div.innerHTML = `
       <strong>${item.description}</strong><br>
-      Cost: $${item.cost}<br>
+      Claimed Cost: $${item.cost}<br>
       <div class="verdict">
         Verdict: ${item.verdict.status}<br>
         Confidence: ${item.verdict.confidence}
