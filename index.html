@@ -16,6 +16,14 @@
     pre { background:#eef2ff; padding:10px; white-space:pre-wrap; }
   </style>
 </head>
+<button onclick="downloadReport()">Download Verified Report (PDF)</button>
+
+<script>
+function downloadReport() {
+  if (!jobId) return alert("Start verification first");
+  window.open(`${API_BASE}/report/${jobId}`, "_blank");
+}
+</script>
 
 <body>
 
