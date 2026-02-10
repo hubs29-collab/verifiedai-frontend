@@ -1,168 +1,86 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
   <title>VerifiedAI</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-    }
-    header {
-      background: #0b2a4a;
-      color: white;
-      padding: 24px;
-      text-align: center;
-    }
-    .card {
-      max-width: 650px;
-      margin: 20px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
-    }
-    h3 {
-      margin-top: 0;
-    }
-    input {
-      width: 100%;
-      padding: 8px;
-      margin-top: 6px;
-      margin-bottom: 6px;
-    }
-    button {
-      background: #2563eb;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    pre {
-      background: #eef2ff;
-      padding: 10px;
-      border-radius: 4px;
-      white-space: pre-wrap;
-    }
+    body { font-family: Arial; background:#f4f6f8; }
+    .card { background:white; padding:15px; margin:15px auto; max-width:700px; }
+    button { background:#2563eb; color:white; padding:6px 10px; border:none; }
+    select { width:100%; margin-top:5px; }
   </style>
 </head>
 
 <body>
 
-<header>
-  <h1>VerifiedAI</h1>
-  <p>Scope-of-Work Verification</p>
-</header>
-
 <div class="card">
-  <h3>1. Start Verification</h3>
-  <button onclick="startJob()">Start</button>
-  <pre id="jobBox"></pre>
+  <button onclick="startJob()">Start Verification</button>
 </div>
 
 <div class="card">
-  <h3>2. Add Scope Item</h3>
-  <input id="desc" placeholder="Description (e.g. Paint living room wall)" />
-  <input id="cost" placeholder="Cost (e.g. 2800)" />
+  <input id="desc" placeholder="Paint living room wall">
+  <input id="cost" placeholder="2800">
   <button onclick="addItem()">Add Item</button>
-  <pre id="itemsBox"></pre>
 </div>
 
 <div class="card">
-  <h3>3. Upload Evidence (multiple images)</h3>
-  <input type="file" id="fileInput" multiple />
-  <br /><br />
-  <button onclick="uploadEvidence()">Upload Files</button>
-  <pre id="uploadBox"></pre>
+  <input type="file" id="fileInput" multiple>
+  <button onclick="uploadEvidence()">Upload Evidence</button>
 </div>
 
 <div class="card">
-  <h3>4. Analyze Evidence</h3>
+  <h4>Map Evidence to Item</h4>
+  <select id="itemSelect"></select>
+  <select id="evidenceSelect" multiple></select>
+  <button onclick="mapEvidence()">Map</button>
+</div>
+
+<div class="card">
   <button onclick="analyze()">Analyze</button>
-  <pre id="analyzeBox"></pre>
-</div>
-
-<div class="card">
-  <h3>5. Results</h3>
-  <button onclick="getResult()">Get Result</button>
-  <pre id="resultBox"></pre>
+  <pre id="out"></pre>
 </div>
 
 <script>
-  // 🔴 IMPORTANT: THIS MUST BE YOUR REPLIT BACKEND URL
-  const API_BASE =
-    "https://ebb700d3-0624-496c-8a99-8d7888669f68-00-2wqp9jjowl32z.picard.replit.dev";
+const API = "https://ebb700d3-0624-496c-8a99-8d7888669f68-00-2wqp9jjowl32z.picard.replit.dev";
+let jobId, items=[], evidence=[];
 
-  let jobId = null;
+async function startJob(){
+  const r=await fetch(API+"/jobs",{method:"POST"});
+  jobId=(await r.json()).id;
+}
 
-  async function startJob() {
-    const res = await fetch(API_BASE + "/jobs", { method: "POST" });
-    const data = await res.json();
-    jobId = data.id;
-    document.getElementById("jobBox").textContent =
-      JSON.stringify(data, null, 2);
-  }
+async function addItem(){
+  const r=await fetch(`${API}/items/${jobId}`,{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({description:desc.value,cost:cost.value})
+  });
+  const i=await r.json(); items.push(i);
+  itemSelect.innerHTML+=`<option value="${i.id}">${i.description}</option>`;
+}
 
-  async function addItem() {
-    if (!jobId) return alert("Start a verification first");
+async function uploadEvidence(){
+  const fd=new FormData();
+  for(const f of fileInput.files) fd.append("files",f);
+  const r=await fetch(`${API}/evidence/${jobId}`,{method:"POST",body:fd});
+  evidence=await r.json();
+  evidenceSelect.innerHTML=evidence.map(e=>`<option value="${e.id}">${e.name}</option>`).join("");
+}
 
-    const description = document.getElementById("desc").value;
-    const cost = document.getElementById("cost").value;
+async function mapEvidence(){
+  const itemId=itemSelect.value;
+  const evidenceIds=[...evidenceSelect.selectedOptions].map(o=>o.value);
+  await fetch(`${API}/map/${jobId}/${itemId}`,{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({evidenceIds})
+  });
+}
 
-    const res = await fetch(`${API_BASE}/items/${jobId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description, cost })
-    });
-
-    const data = await res.json();
-    document.getElementById("itemsBox").textContent +=
-      JSON.stringify(data, null, 2) + "\n";
-  }
-
-  async function uploadEvidence() {
-    if (!jobId) return alert("Start a verification first");
-
-    const files = document.getElementById("fileInput").files;
-    if (!files.length) return alert("Select files");
-
-    const fd = new FormData();
-    for (const f of files) fd.append("files", f);
-
-    const res = await fetch(`${API_BASE}/evidence/${jobId}`, {
-      method: "POST",
-      body: fd
-    });
-
-    const data = await res.json();
-    document.getElementById("uploadBox").textContent =
-      JSON.stringify(data, null, 2);
-  }
-
-  async function analyze() {
-    if (!jobId) return alert("Start a verification first");
-
-    const res = await fetch(`${API_BASE}/analyze/${jobId}`, {
-      method: "POST"
-    });
-
-    const data = await res.json();
-    document.getElementById("analyzeBox").textContent =
-      JSON.stringify(data, null, 2);
-  }
-
-  async function getResult() {
-    if (!jobId) return alert("Start a verification first");
-
-    const res = await fetch(`${API_BASE}/results/${jobId}`);
-    const data = await res.json();
-    document.getElementById("resultBox").textContent =
-      JSON.stringify(data, null, 2);
-  }
+async function analyze(){
+  await fetch(`${API}/analyze/${jobId}`,{method:"POST"});
+  const r=await fetch(`${API}/results/${jobId}`);
+  out.textContent=JSON.stringify(await r.json(),null,2);
+}
 </script>
 
 </body>
