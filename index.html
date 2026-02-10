@@ -5,31 +5,64 @@
   <title>VerifiedAI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: Arial; background:#f4f6f8; margin:0; }
-    header { background:#0b2a4a; color:white; padding:20px; text-align:center; }
-    .card { background:white; max-width:900px; margin:20px auto; padding:20px; border-radius:8px; }
-    button { background:#2563eb; color:white; border:none; padding:8px 14px; border-radius:5px; cursor:pointer; margin-top:6px; }
-    button:disabled { background:#9ca3af; cursor:not-allowed; }
-    input { width:100%; padding:8px; margin-top:6px; }
-    .item { border:1px solid #ddd; padding:10px; margin-top:10px; border-radius:6px; }
-    .verdict { font-weight:bold; margin-top:6px; }
-    pre { background:#eef2ff; padding:10px; white-space:pre-wrap; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+    }
+    header {
+      background: #0b2a4a;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    button:disabled {
+      background: #9ca3af;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 6px;
+    }
+    .item {
+      border: 1px solid #ddd;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+    .verdict {
+      font-weight: bold;
+      margin-top: 6px;
+    }
+    pre {
+      background: #eef2ff;
+      padding: 10px;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
-<button onclick="downloadReport()">Download Verified Report (PDF)</button>
-
-<script>
-function downloadReport() {
-  if (!jobId) return alert("Start verification first");
-  window.open(`${API_BASE}/report/${jobId}`, "_blank");
-}
-</script>
 
 <body>
 
 <header>
   <h1>VerifiedAI</h1>
-  <p>Proposal & Scope Verification</p>
+  <p>Verify scopes, proposals, and costs with confidence</p>
 </header>
 
 <div class="card">
@@ -54,7 +87,7 @@ function downloadReport() {
 </div>
 
 <div class="card">
-  <h3>4. Upload Evidence</h3>
+  <h3>4. Upload Evidence (Photos)</h3>
   <input type="file" id="files" multiple />
   <button onclick="uploadEvidence()">Upload Evidence</button>
   <pre id="uploadBox"></pre>
@@ -71,6 +104,11 @@ function downloadReport() {
   <div id="resultsBox"></div>
 </div>
 
+<div class="card">
+  <h3>7. Download</h3>
+  <button onclick="downloadReport()">Download Verified Report (PDF)</button>
+</div>
+
 <script>
 const API_BASE =
   "https://ebb700d3-0624-496c-8a99-8d7888669f68-00-2wqp9jjowl32z.picard.replit.dev";
@@ -78,9 +116,9 @@ const API_BASE =
 let jobId = null;
 
 async function startJob() {
-  const r = await fetch(API_BASE + "/jobs", { method:"POST" });
+  const r = await fetch(API_BASE + "/jobs", { method: "POST" });
   const d = await r.json();
-  jobId = d.jobId; // ✅ FIXED
+  jobId = d.jobId;
   jobBox.textContent = "Job ID: " + jobId;
   itemsBox.innerHTML = "";
   resultsBox.innerHTML = "";
@@ -89,6 +127,7 @@ async function startJob() {
 
 async function uploadProposal() {
   if (!jobId) return alert("Start verification first");
+  if (!proposalFile.files.length) return alert("Select a file");
 
   const fd = new FormData();
   fd.append("file", proposalFile.files[0]);
@@ -108,9 +147,12 @@ async function addItem() {
   if (!jobId) return alert("Start verification first");
 
   const r = await fetch(`${API_BASE}/items/${jobId}`, {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ description: desc.value, cost: cost.value })
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      description: desc.value,
+      cost: cost.value
+    })
   });
 
   const item = await r.json();
@@ -120,7 +162,6 @@ async function addItem() {
 function renderItem(item) {
   const div = document.createElement("div");
   div.className = "item";
-  div.id = item.id;
   div.innerHTML = `
     <strong>${item.description}</strong><br>
     Claimed Cost: $${item.cost}<br>
@@ -136,7 +177,7 @@ async function uploadEvidence() {
   for (const f of files.files) fd.append("files", f);
 
   const r = await fetch(`${API_BASE}/evidence/${jobId}`, {
-    method:"POST",
+    method: "POST",
     body: fd
   });
 
@@ -145,7 +186,7 @@ async function uploadEvidence() {
 
 async function analyze() {
   if (!jobId) return alert("Start verification first");
-  await fetch(`${API_BASE}/analyze/${jobId}`, { method:"POST" });
+  await fetch(`${API_BASE}/analyze/${jobId}`, { method: "POST" });
   alert("Analysis complete");
 }
 
@@ -164,13 +205,19 @@ async function getResults() {
       <strong>${item.description}</strong><br>
       Claimed Cost: $${item.cost}<br>
       <div class="verdict">
-        Verdict: ${item.verdict.status}<br>
-        Confidence: ${item.verdict.confidence}
+        Scope: ${item.verdict.status} (${item.verdict.confidence})<br>
+        Cost: ${item.costCheck.status}
       </div>
       <p>${item.verdict.explanation}</p>
+      <p>${item.costCheck.explanation}</p>
     `;
     resultsBox.appendChild(div);
   });
+}
+
+function downloadReport() {
+  if (!jobId) return alert("Start verification first");
+  window.open(`${API_BASE}/report/${jobId}`, "_blank");
 }
 </script>
 
