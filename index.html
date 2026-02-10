@@ -1,85 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>VerifiedAI</title>
-  <style>
-    body { font-family: Arial; background:#f4f6f8; }
-    .card { background:white; padding:15px; margin:15px auto; max-width:700px; }
-    button { background:#2563eb; color:white; padding:6px 10px; border:none; }
-    select { width:100%; margin-top:5px; }
-  </style>
+  <meta charset="UTF-8" />
+  <title>VerifiedAI – Hard Reset</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 
-<body>
+<body style="font-family: Arial; padding: 30px">
 
-<div class="card">
-  <button onclick="startJob()">Start Verification</button>
-</div>
+<h1>VerifiedAI – Button Test</h1>
 
-<div class="card">
-  <input id="desc" placeholder="Paint living room wall">
-  <input id="cost" placeholder="2800">
-  <button onclick="addItem()">Add Item</button>
-</div>
+<button onclick="alert('CLICK WORKS')">Test Button</button>
 
-<div class="card">
-  <input type="file" id="fileInput" multiple>
-  <button onclick="uploadEvidence()">Upload Evidence</button>
-</div>
+<hr>
 
-<div class="card">
-  <h4>Map Evidence to Item</h4>
-  <select id="itemSelect"></select>
-  <select id="evidenceSelect" multiple></select>
-  <button onclick="mapEvidence()">Map</button>
-</div>
+<button onclick="startJob()">Start Verification</button>
 
-<div class="card">
-  <button onclick="analyze()">Analyze</button>
-  <pre id="out"></pre>
-</div>
+<pre id="output"></pre>
 
 <script>
-const API = "https://ebb700d3-0624-496c-8a99-8d7888669f68-00-2wqp9jjowl32z.picard.replit.dev";
-let jobId, items=[], evidence=[];
+const API_BASE =
+  "https://ebb700d3-0624-496c-8a99-8d7888669f68-00-2wqp9jjowl32z.picard.replit.dev";
 
-async function startJob(){
-  const r=await fetch(API+"/jobs",{method:"POST"});
-  jobId=(await r.json()).id;
-}
+let jobId = null;
 
-async function addItem(){
-  const r=await fetch(`${API}/items/${jobId}`,{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({description:desc.value,cost:cost.value})
+async function startJob() {
+  alert("Start pressed");
+
+  const res = await fetch(API_BASE + "/jobs", {
+    method: "POST"
   });
-  const i=await r.json(); items.push(i);
-  itemSelect.innerHTML+=`<option value="${i.id}">${i.description}</option>`;
-}
 
-async function uploadEvidence(){
-  const fd=new FormData();
-  for(const f of fileInput.files) fd.append("files",f);
-  const r=await fetch(`${API}/evidence/${jobId}`,{method:"POST",body:fd});
-  evidence=await r.json();
-  evidenceSelect.innerHTML=evidence.map(e=>`<option value="${e.id}">${e.name}</option>`).join("");
-}
+  const data = await res.json();
+  jobId = data.id;
 
-async function mapEvidence(){
-  const itemId=itemSelect.value;
-  const evidenceIds=[...evidenceSelect.selectedOptions].map(o=>o.value);
-  await fetch(`${API}/map/${jobId}/${itemId}`,{
-    method:"POST",
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({evidenceIds})
-  });
-}
-
-async function analyze(){
-  await fetch(`${API}/analyze/${jobId}`,{method:"POST"});
-  const r=await fetch(`${API}/results/${jobId}`);
-  out.textContent=JSON.stringify(await r.json(),null,2);
+  document.getElementById("output").textContent =
+    "JOB CREATED: " + jobId;
 }
 </script>
 
