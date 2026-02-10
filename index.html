@@ -7,9 +7,11 @@
   <style>
     body { font-family: Arial; background:#f4f6f8; margin:0; }
     header { background:#0b2a4a; color:white; padding:20px; text-align:center; }
-    .card { background:white; max-width:700px; margin:20px auto; padding:20px; border-radius:8px; }
-    button { background:#2563eb; color:white; border:none; padding:8px 14px; border-radius:5px; cursor:pointer; }
-    input, select { width:100%; padding:8px; margin-top:6px; }
+    .card { background:white; max-width:800px; margin:20px auto; padding:20px; border-radius:8px; }
+    button { background:#2563eb; color:white; border:none; padding:8px 14px; border-radius:5px; cursor:pointer; margin-top:6px; }
+    input { width:100%; padding:8px; margin-top:6px; }
+    .item { border:1px solid #ddd; padding:10px; margin-top:10px; border-radius:6px; }
+    .verdict { font-weight:bold; margin-top:6px; }
     pre { background:#eef2ff; padding:10px; white-space:pre-wrap; }
   </style>
 </head>
@@ -18,12 +20,12 @@
 
 <header>
   <h1>VerifiedAI</h1>
-  <p>Scope-of-Work Verification</p>
+  <p>Item-Level Scope Verification</p>
 </header>
 
 <div class="card">
   <h3>1. Start Verification</h3>
-  <button onclick="startJob()">Start</button>
+  <button onclick="startJob()">Start Verification</button>
   <pre id="jobBox"></pre>
 </div>
 
@@ -32,26 +34,25 @@
   <input id="desc" placeholder="Paint living room wall" />
   <input id="cost" placeholder="2800" />
   <button onclick="addItem()">Add Item</button>
-  <pre id="itemsBox"></pre>
+  <div id="itemsBox"></div>
 </div>
 
 <div class="card">
-  <h3>3. Upload Evidence</h3>
+  <h3>3. Upload Evidence (for job)</h3>
   <input type="file" id="files" multiple />
-  <button onclick="uploadEvidence()">Upload Files</button>
+  <button onclick="uploadEvidence()">Upload Images</button>
   <pre id="uploadBox"></pre>
 </div>
 
 <div class="card">
   <h3>4. Analyze</h3>
-  <button onclick="analyze()">Analyze</button>
-  <pre id="analyzeBox"></pre>
+  <button onclick="analyze()">Analyze Items</button>
 </div>
 
 <div class="card">
   <h3>5. Results</h3>
-  <button onclick="getResult()">Get Result</button>
-  <pre id="resultBox"></pre>
+  <button onclick="getResults()">Get Results</button>
+  <div id="resultsBox"></div>
 </div>
 
 <script>
@@ -59,12 +60,17 @@ const API_BASE =
   "https://ebb700d3-0624-496c-8a99-8d7888669f68-00-2wqp9jjowl32z.picard.replit.dev";
 
 let jobId = null;
+let itemList = [];
+let uploadedImages = [];
 
 async function startJob() {
   const r = await fetch(API_BASE + "/jobs", { method:"POST" });
   const d = await r.json();
   jobId = d.id;
-  jobBox.textContent = JSON.stringify(d, null, 2);
+  jobBox.textContent = "Job ID: " + jobId;
+  itemList = [];
+  itemsBox.innerHTML = "";
+  resultsBox.innerHTML = "";
 }
 
 async function addItem() {
@@ -76,8 +82,18 @@ async function addItem() {
     body: JSON.stringify({ description: desc.value, cost: cost.value })
   });
 
-  const d = await r.json();
-  itemsBox.textContent += JSON.stringify(d, null, 2) + "\n";
+  const item = await r.json();
+  itemList.push(item);
+
+  const div = document.createElement("div");
+  div.className = "item";
+  div.id = item.id;
+  div.innerHTML = `
+    <strong>${item.description}</strong><br>
+    Cost: $${item.cost}<br>
+    <small>Item ID: ${item.id}</small>
+  `;
+  itemsBox.appendChild(div);
 }
 
 async function uploadEvidence() {
@@ -95,13 +111,34 @@ async function uploadEvidence() {
 }
 
 async function analyze() {
+  if (!jobId) return alert("Start verification first");
+
   const r = await fetch(`${API_BASE}/analyze/${jobId}`, { method:"POST" });
-  analyzeBox.textContent = JSON.stringify(await r.json(), null, 2);
+  alert("Analysis complete");
 }
 
-async function getResult() {
+async function getResults() {
+  if (!jobId) return alert("Start verification first");
+
   const r = await fetch(`${API_BASE}/results/${jobId}`);
-  resultBox.textContent = JSON.stringify(await r.json(), null, 2);
+  const data = await r.json();
+
+  resultsBox.innerHTML = "";
+
+  data.items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <strong>${item.description}</strong><br>
+      Cost: $${item.cost}<br>
+      <div class="verdict">
+        Verdict: ${item.verdict.status}<br>
+        Confidence: ${item.verdict.confidence}
+      </div>
+      <p>${item.verdict.explanation}</p>
+    `;
+    resultsBox.appendChild(div);
+  });
 }
 </script>
 
