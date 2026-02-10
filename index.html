@@ -2,21 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>VerifiedAI – Hard Reset</title>
+  <title>VerifiedAI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial; background:#f4f6f8; margin:0; }
+    header { background:#0b2a4a; color:white; padding:20px; text-align:center; }
+    .card { background:white; max-width:700px; margin:20px auto; padding:20px; border-radius:8px; }
+    button { background:#2563eb; color:white; border:none; padding:8px 14px; border-radius:5px; cursor:pointer; }
+    input, select { width:100%; padding:8px; margin-top:6px; }
+    pre { background:#eef2ff; padding:10px; white-space:pre-wrap; }
+  </style>
 </head>
 
-<body style="font-family: Arial; padding: 30px">
+<body>
 
-<h1>VerifiedAI – Button Test</h1>
+<header>
+  <h1>VerifiedAI</h1>
+  <p>Scope-of-Work Verification</p>
+</header>
 
-<button onclick="alert('CLICK WORKS')">Test Button</button>
+<div class="card">
+  <h3>1. Start Verification</h3>
+  <button onclick="startJob()">Start</button>
+  <pre id="jobBox"></pre>
+</div>
 
-<hr>
+<div class="card">
+  <h3>2. Add Scope Item</h3>
+  <input id="desc" placeholder="Paint living room wall" />
+  <input id="cost" placeholder="2800" />
+  <button onclick="addItem()">Add Item</button>
+  <pre id="itemsBox"></pre>
+</div>
 
-<button onclick="startJob()">Start Verification</button>
+<div class="card">
+  <h3>3. Upload Evidence</h3>
+  <input type="file" id="files" multiple />
+  <button onclick="uploadEvidence()">Upload Files</button>
+  <pre id="uploadBox"></pre>
+</div>
 
-<pre id="output"></pre>
+<div class="card">
+  <h3>4. Analyze</h3>
+  <button onclick="analyze()">Analyze</button>
+  <pre id="analyzeBox"></pre>
+</div>
+
+<div class="card">
+  <h3>5. Results</h3>
+  <button onclick="getResult()">Get Result</button>
+  <pre id="resultBox"></pre>
+</div>
 
 <script>
 const API_BASE =
@@ -25,17 +61,47 @@ const API_BASE =
 let jobId = null;
 
 async function startJob() {
-  alert("Start pressed");
+  const r = await fetch(API_BASE + "/jobs", { method:"POST" });
+  const d = await r.json();
+  jobId = d.id;
+  jobBox.textContent = JSON.stringify(d, null, 2);
+}
 
-  const res = await fetch(API_BASE + "/jobs", {
-    method: "POST"
+async function addItem() {
+  if (!jobId) return alert("Start verification first");
+
+  const r = await fetch(`${API_BASE}/items/${jobId}`, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ description: desc.value, cost: cost.value })
   });
 
-  const data = await res.json();
-  jobId = data.id;
+  const d = await r.json();
+  itemsBox.textContent += JSON.stringify(d, null, 2) + "\n";
+}
 
-  document.getElementById("output").textContent =
-    "JOB CREATED: " + jobId;
+async function uploadEvidence() {
+  if (!jobId) return alert("Start verification first");
+
+  const fd = new FormData();
+  for (const f of files.files) fd.append("files", f);
+
+  const r = await fetch(`${API_BASE}/evidence/${jobId}`, {
+    method:"POST",
+    body: fd
+  });
+
+  uploadBox.textContent = JSON.stringify(await r.json(), null, 2);
+}
+
+async function analyze() {
+  const r = await fetch(`${API_BASE}/analyze/${jobId}`, { method:"POST" });
+  analyzeBox.textContent = JSON.stringify(await r.json(), null, 2);
+}
+
+async function getResult() {
+  const r = await fetch(`${API_BASE}/results/${jobId}`);
+  resultBox.textContent = JSON.stringify(await r.json(), null, 2);
 }
 </script>
 
