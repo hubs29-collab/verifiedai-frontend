@@ -164,7 +164,7 @@ function renderItem(item) {
   div.className = "item";
   div.innerHTML = `
     <strong>${item.description}</strong><br>
-    Claimed Cost: $${item.cost}<br>
+    Claimed Cost: $${item.claimed_cost || item.cost}<br>
     <small>Item ID: ${item.id}</small>
   `;
   itemsBox.appendChild(div);
@@ -203,13 +203,13 @@ async function getResults() {
     div.className = "item";
     div.innerHTML = `
       <strong>${item.description}</strong><br>
-      Claimed Cost: $${item.cost}<br>
+      Claimed Cost: $${item.claimed_cost}<br>
       <div class="verdict">
-        Scope: ${item.verdict.status} (${item.verdict.confidence})<br>
-        Cost: ${item.costCheck.status}
+        Scope: ${item.scope_verdict} (${item.scope_confidence})<br>
+        Cost: ${item.cost_status}
       </div>
-      <p>${item.verdict.explanation}</p>
-      <p>${item.costCheck.explanation}</p>
+      <p>${item.scope_explanation}</p>
+      <p>${item.cost_explanation}</p>
     `;
     resultsBox.appendChild(div);
   });
